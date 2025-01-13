@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shortest Route Planner</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<style>
+
+</style>
+<body>
+    <div class="container">
+        <h1>Shortest Route Planner</h1>
+        <label for="start">Starting Point:</label>
+        <input type="text" id="start" placeholder="Enter start location">
+
+        <div id="placesInputs">
+            <label>Enter Place 1:</label>
+            <input type="text" class="place" placeholder="Enter location">
+            <br><br>
+        </div>
+
+        <button onclick="addPlaceInput()">Add Another Place</button>
+        <br><br>
+
+        <button onclick="plotRoute()" type="submit">Plot Shortest Route</button>
+    </div>
+    
+    <div id="map"></div>
+
+    <form class="container" method="POST">
+        <label for="city">Enter City:</label>
+        <input type="text" id="city" name="city" placeholder="City Name" required>
+        <button type="submit">Don't Miss out on</button>
+    </form>
+
+    <div class="vendor-ads">
+        {% for vendor in vendors %}
+        <div class="vendor-ad">
+            <h2>{{ vendor.shop_name }}</h2>
+            <p>{{ vendor.slogan }}</p>
+            <p>{{ vendor.city}}</p>
+            <p>{{ vendor.exact_address}}</p>
+            <p>{{vendor.special_offers}}</p>
+        </div>
+        {% endfor %}
+    </div>
+
+
+    <script>
+        const map = L.map('map').setView([20.5937, 78.9629], 5); // Centered on India
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Nominatim API for geocoding
+        async function getCoordinates(place) {
+            try {
+                const response = await axios.get(`https://nominatim.openstreetmap.org/search`, {
+                    params: {
+                        q: place,
+                        format: 'json',
+                        limit: 1
+                    }
+                });
+                if (response.data.length > 0) {
+                    return {
+                        lat: parseFloat(response.data[0].lat),
+                        lon: parseFloat(response.data[0].lon)
+                    };
+                } else {
+                    alert(`Place not found: ${place}`);
+                    return null;
+                }
+            } catch (error) {
+                console.error(`Error fetching coordinates for ${place}:`, error);
+                alert(`Error fetching coordinates for ${place}`);
+                return null;
+            }
+        }
+
+        // Function to add more input fields for places
+        let placeCount = 1; // Initialize a counter for the places
+
+function addPlaceInput() {
+    const placesInputs = document.getElementById('placesInputs');
+    placeCount++; // Increment the counter
+    const newLabel = document.createElement('label');
+    newLabel.innerText = `Enter Place ${placeCount}:`;
+    const newInput = document.createElement('input');
+    newInput.type = 'text';
+    newInput.className = 'place';
+    newInput.placeholder = 'Enter location';
+    placesInputs.appendChild(newLabel);
+    placesInputs.appendChild(document.createElement('br'));
+    placesInputs.appendChild(newInput);
+    placesInputs.appendChild(document.createElement('br'));
+}
+
+
+        async function plotRoute() {
+            const start = document.getElementById('start').value;
+            const placesInputs = document.querySelectorAll('.place');
+            const places = [];
+
+            // Collect places from input fields
+            for (let input of placesInputs) {
+                if (input.value.trim()) {
+                    places.push(input.value.trim());
+                }
+            }
+
+            // Geocode all places including start
+            const allPlaces = [start, ...places];
+            const coords = [];
+
+            for (let place of allPlaces) {
+                const location = await getCoordinates(place);
+
+                if (location) {
+                    coords.push([location.lat, location.lon]);
+                } else {
+                    console.error(`Skipping ${place} as coordinates couldn't be found.`);
+                    return;
+                }
+            }
+
+
+            // Find the shortest route and make sure it loops back to the start
+            const orderedCoords = findShortestRoute(coords);
+            orderedCoords.push(orderedCoords[0]); // Loop back to start
+
+            // Plot markers and route
+            const group = L.featureGroup();
+            orderedCoords.forEach((coord, index) => {
+                const marker = L.marker(coord).addTo(map).bindPopup(allPlaces[index]);
+                group.addLayer(marker);
+            });
+
+            // Draw a polyline for the route
+            L.polyline(orderedCoords, { color: 'blue', weight: 4 }).addTo(map);
+
+            // Fit the map to the markers
+            map.fitBounds(group.getBounds());
+        }
+
+        // Function to calculate distance between two points using Haversine formula
+        function haversineDistance(coords1, coords2) {
+            const toRad = (x) => x * Math.PI / 180;
+            const lat1 = coords1[0];
+            const lon1 = coords1[1];
+            const lat2 = coords2[0];
+            const lon2 = coords2[1];
+
+            const R = 6371; // km
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // Function to reorder locations based on nearest neighbor heuristic (approximate TSP)
+        function findShortestRoute(coords) {
+            const visited = [];
+            const unvisited = [...coords];
+            let current = unvisited.shift();
+            visited.push(current);
+
+            while (unvisited.length > 0) {
+                let nearestIndex = 0;
+                let nearestDistance = haversineDistance(current, unvisited[0]);
+
+                unvisited.forEach((place, index) => {
+                    const distance = haversineDistance(current, place);
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestIndex = index;
+                    }
+                });
+
+                current = unvisited.splice(nearestIndex, 1)[0];
+                visited.push(current);
+            }
+
+            return visited;
+        }
+
+        async function plotRoute() {
+            const start = document.getElementById('start').value;
+            const placesInputs = document.querySelectorAll('.place');
+            const places = [];
+
+            // Collect places from input fields
+            for (let input of placesInputs) {
+                if (input.value.trim()) {
+                    places.push(input.value.trim());
+                }
+            }
+
+            // Geocode all places including start
+            const allPlaces = [start, ...places];
+            const coords = [];
+
+            for (let place of allPlaces) {
+                const location = await getCoordinates(place);
+
+                if (location) {
+                    coords.push([location.lat, location.lon]);
+                } else {
+                    console.error(`Skipping ${place} as coordinates couldn't be found.`);
+                    return;
+                }
+            }
+
+            // Find the shortest route and make sure it loops back to the start
+            const orderedCoords = findShortestRoute(coords);
+            orderedCoords.push(orderedCoords[0]); // Loop back to start
+
+            // Plot markers and route
+            const group = L.featureGroup();
+            orderedCoords.forEach((coord, index) => {
+                const marker = L.marker(coord).addTo(map).bindPopup(allPlaces[index]);
+                group.addLayer(marker);
+            });
+
+            // Draw a polyline for the route
+            L.polyline(orderedCoords, { color: 'blue', weight: 4 }).addTo(map);
+
+            // Fit the map to the markers
+            map.fitBounds(group.getBounds());
+        }
+    </script>
+</body>
+</html>

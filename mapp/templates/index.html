@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendor Ads</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Find Local Vendors</h1>
+        <form method="POST">
+            <label for="city">Enter City:</label>
+            <input type="text" id="city" name="city" placeholder="City Name" required>
+            <button type="submit">Search</button>
+        </form>
+
+        <div class="vendor-ads">
+            {% for vendor in vendors %}
+            <div class="vendor-ad">
+                <h2>{{ vendor.shop_name }}</h2>
+                <p>{{ vendor.slogan }}</p>
+                <p>{{ vendor.city}}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>

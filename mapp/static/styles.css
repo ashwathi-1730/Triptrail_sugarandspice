@@ -1,0 +1,102 @@
+#map { 
+    height: 600px;
+    margin-top: 20px;
+    z-index: 0;
+    }
+
+body {
+    font-family: Arial, sans-serif;
+}
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px;
+    background-color: #f4f4f4;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column; /* Change to vertical layout */
+    justify-content: flex-start; /* Align items at the start */
+    align-items: flex-start;
+    position: relative;
+}
+
+
+.vendor-ads {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    margin-top: 20px;
+    z-index: 1;
+}
+
+.vendor-ad {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 15px;
+    width: 300px;
+    margin: 0 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    animation: fly-in 1.5s forwards;
+}
+
+
+.vendor-ad:nth-child(1) {
+    animation-name: fly-in-left;
+}
+
+.vendor-ad:nth-child(2) {
+    animation-name: fly-in-right;
+}
+
+
+@keyframes fly-in-left {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fly-in-right {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 30px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #28a745;
+    border: none;
+    color: white;
+    font-size: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+button:hover {
+    background-color: #218838;
+}
+#vendor-name {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background-color: yellow;
+    padding: 5px;
+    border-radius: 5px;
+}

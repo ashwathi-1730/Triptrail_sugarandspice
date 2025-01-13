@@ -31,7 +31,7 @@ async def chat():
     # Generate response asynchronously
     result = await asyncio.to_thread(chain.invoke, {"context": context, "question": user_input})
     
-    # Format the response with basic HTML tags for better display
+    
     formatted_result = result.replace("\n", "<br>")  # Replace line breaks with <br> tags
     
     # Append to conversation context
